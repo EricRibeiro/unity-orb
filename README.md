@@ -16,7 +16,7 @@ Easily build and test your Unity project.
 
 We welcome [issues](https://github.com/game-ci/unity-orb/issues) to and [pull requests](https://github.com/game-ci/unity-orb/pulls) against this repository!
 
-### How to Publish An Update
+### How to Publish An Update (for maintainers)
 
 1. Merge pull requests with desired changes to the main branch.
     - For the best experience, squash-and-merge and use [Conventional Commit Messages](https://conventionalcommits.org/).
@@ -38,9 +38,49 @@ If you want a private orb for your build env. The following steps allow you to d
 [Manual Orb Authoring Process](https://circleci.com/docs/orb-author-validate-publish/#publish-your-orb)
 
 ```bash
-circleci namespace create <name> --org-id <your-organization-id>
-circleci orb create <my-namespace>/<my-orb-name> --private
-circleci orb pack src > unity-orb.yml
-circleci orb publish unity-orb.yml <my-namespace>/<my-orb-name>@dev:first
-circleci orb publish promote <my-namespace>/<my-orb-name>@dev:first patch
+# Define variables
+REPO_URL="git@github.com:game-ci/unity-orb.git" # Change to your fork if needed
+BRANCH_NAME="main" # Use desired branch for testing PRs
+NAMESPACE="your-username" # Typically your GitHub username; Note: you can only have one namespace per CircleCI org
+ORG_ID="00000000-0000-0000-0000-000000000000" # Found in CircleCI Organization Settings > Overview page
+ORB_NAME="unity-orb-private" # Private Orbs can't become public, so using `-private` allows your_username/unity-orb to be public later
+
+# You should not have to change these variables
+SRC_DIR="src"
+OUTPUT_FILE="unity-orb.yml"
+DEV_VERSION="dev:first"
+RELEASE_TYPE="patch"
+
+# Clone the repository
+git clone $REPO_URL unity-orb
+cd unity-orb || exit
+
+# Checkout the desired branch
+git checkout $BRANCH_NAME
+
+# Authenticate with CircleCI
+# You will need a token from https://app.circleci.com/settings/user/tokens to continue
+circleci setup
+
+# Create a CircleCI namespace
+circleci namespace create $NAMESPACE --org-id $ORG_ID
+
+# Create a private Orb under the namespace
+# Note: Error: To create private orbs, your organization must enable the 'Allow private orbs' feature in Org Settings > Security.
+circleci orb create $NAMESPACE/$ORB_NAME --private
+
+# Pack the Orb configuration from the source directory
+circleci orb pack $SRC_DIR > $OUTPUT_FILE
+
+# Publish the packed Orb to a development version
+circleci orb publish $OUTPUT_FILE $NAMESPACE/$ORB_NAME@$DEV_VERSION
+
+# Promote the Orb to a stable release version
+circleci orb publish promote $NAMESPACE/$ORB_NAME@$DEV_VERSION $RELEASE_TYPE
+
+# You can now use the Orb in your CircleCI configuration
+echo "Orb published successfully"
+
+# Retrieve information about the Orb
+circleci orb info $NAMESPACE/$ORB_NAME
 ```
